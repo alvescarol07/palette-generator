@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palette — Gerador de Paletas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1f1f1f;
+    --border: #2a2a2a;
+    --text: #f0ede6;
+    --muted: #666;
+    --accent: #e8ff5a;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+
+  header span {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 65px);
+  }
+
+  /* LEFT PANEL */
+  .left {
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .drop-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    position: relative;
+    padding: 3rem;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    background: var(--surface);
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-icon {
+    width: 64px;
+    height: 64px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--muted);
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .drop-zone:hover .drop-icon {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .drop-label {
+    text-align: center;
+  }
+
+  .drop-label p {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  .drop-label strong {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  /* image preview */
+  .preview-area {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preview-area.visible { display: flex; }
+
+  .preview-area img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .preview-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .preview-overlay button {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+
+  .preview-overlay button:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.6);
+  }
+
+  .file-name {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.05em;
+  }
+
+  /* RIGHT PANEL */
+  .right {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .controls {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .controls label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .controls input[type="range"] {
+    -webkit-appearance: none;
+    width: 100px;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+  }
+
+  .controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .controls span {
+    color: var(--accent);
+    min-width: 1.2rem;
+    text-align: right;
+  }
+
+  .palette-area {
+    flex: 1;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+  }
+
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+    line-height: 1.8;
+    letter-spacing: 0.05em;
+  }
+
+  /* COLOR SWATCHES */
+  .swatch-row {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--surface);
+    animation: slideIn 0.3s ease forwards;
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  @keyframes slideIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .swatch-color {
+    width: 48px;
+    height: 48px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.15s;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .swatch-color:hover { transform: scale(1.08); }
+
+  .swatch-info { min-width: 0; }
+
+  .swatch-hex {
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .swatch-hex:hover { color: var(--accent); }
+
+  .swatch-rgb {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  .copy-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .copy-btn.copied {
+    border-color: #5aff9e;
+    color: #5aff9e;
+  }
+
+  /* PREVIEW BAR */
+  .preview-bar-wrap {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .preview-bar-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.75rem;
+  }
+
+  .preview-bar {
+    height: 36px;
+    border-radius: 3px;
+    display: flex;
+    overflow: hidden;
+  }
+
+  .preview-bar-seg {
+    flex: 1;
+    transition: flex 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .preview-bar-seg:hover::after {
+    content: attr(data-hex);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #000;
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 2px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .export-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .export-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+
+  .export-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  canvas { display: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--accent);
+    color: #000;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 2px;
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    letter-spacing: 0.05em;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; }
+    .left { min-height: 50vh; border-right: none; border-bottom: 1px solid var(--border); }
+    header { padding: 1.25rem 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>palette.</h1>
+  <span>// gerador de paletas por imagem</span>
+</header>
+
+<main>
+  <!-- LEFT: upload / preview -->
+  <div class="left">
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="drop-icon">⬆</div>
+      <div class="drop-label">
+        <strong>arraste uma imagem ou clique para escolher</strong>
+        <p>JPG, PNG, WEBP, GIF</p>
+      </div>
+    </div>
+    <div class="preview-area" id="previewArea">
+      <img id="previewImg" src="" alt="Imagem carregada">
+      <div class="preview-overlay">
+        <span class="file-name" id="fileName"></span>
+        <button onclick="resetAll()">trocar imagem</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: palette -->
+  <div class="right">
+    <div class="controls">
+      <label>
+        CORES
+        <input type="range" id="colorCount" min="3" max="12" value="6" oninput="onCountChange(this)">
+        <span id="countVal">6</span>
+      </label>
+      <label>
+        QUALIDADE
+        <input type="range" id="quality" min="1" max="5" value="3" oninput="onQualChange(this)">
+        <span id="qualVal">3</span>
+      </label>
+    </div>
+
+    <div class="palette-area" id="paletteArea">
+      <div class="empty-state" id="emptyState">
+        carregue uma imagem<br>para extrair a paleta
+      </div>
+    </div>
+
+    <div class="preview-bar-wrap" id="barWrap" style="display:none">
+      <div class="preview-bar-label">// PALETA COMPLETA</div>
+      <div class="preview-bar" id="previewBar"></div>
+      <div class="export-row">
+        <button class="export-btn" onclick="exportCSS()">exportar CSS</button>
+        <button class="export-btn" onclick="exportJSON()">exportar JSON</button>
+        <button class="export-btn" onclick="exportHEX()">copiar HEX</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<canvas id="canvas"></canvas>
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentPalette = [];
+  let currentImg = null;
+
+  // ─── drag & drop ───────────────────────────────
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadFile(file);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadFile(e.target.files[0]);
+  });
+
+  function loadFile(file) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        currentImg = img;
+        document.getElementById('previewImg').src = ev.target.result;
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('dropZone').style.display = 'none';
+        document.getElementById('previewArea').classList.add('visible');
+        extractPalette();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function resetAll() {
+    currentImg = null;
+    currentPalette = [];
+    document.getElementById('dropZone').style.display = 'flex';
+    document.getElementById('previewArea').classList.remove('visible');
+    document.getElementById('previewImg').src = '';
+    fileInput.value = '';
+    document.getElementById('paletteArea').innerHTML = '<div class="empty-state" id="emptyState">carregue uma imagem<br>para extrair a paleta</div>';
+    document.getElementById('barWrap').style.display = 'none';
+    document.getElementById('previewBar').innerHTML = '';
+  }
+
+  function onCountChange(el) {
+    document.getElementById('countVal').textContent = el.value;
+    if (currentImg) extractPalette();
+  }
+
+  function onQualChange(el) {
+    document.getElementById('qualVal').textContent = el.value;
+    if (currentImg) extractPalette();
+  }
+
+  // ─── EXTRAÇÃO DE CORES (median-cut simplificado) ──────────────
+  function extractPalette() {
+    if (!currentImg) return;
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const quality = parseInt(document.getElementById('quality').value);
+    const numColors = parseInt(document.getElementById('colorCount').value);
+
+    // resolução de amostragem baseada na qualidade
+    const maxDim = [80, 120, 180, 260, 400][quality - 1];
+    const ratio = Math.min(maxDim / currentImg.width, maxDim / currentImg.height);
+    canvas.width  = Math.round(currentImg.width  * ratio);
+    canvas.height = Math.round(currentImg.height * ratio);
+
+    ctx.drawImage(currentImg, 0, 0, canvas.width, canvas.height);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    // coletar pixels (pular transparentes)
+    const pixels = [];
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 128) continue;
+      pixels.push([data[i], data[i+1], data[i+2]]);
+    }
+
+    // median cut
+    const palette = medianCut(pixels, numColors);
+    currentPalette = palette.map(rgb => ({
+      rgb,
+      hex: rgbToHex(...rgb)
+    }));
+
+    renderPalette();
+  }
+
+  function medianCut(pixels, numColors) {
+    let buckets = [pixels];
+
+    while (buckets.length < numColors) {
+      // pega o bucket com maior range
+      let maxRange = -1, splitIdx = 0;
+      buckets.forEach((bucket, i) => {
+        const r = range(bucket, 0), g = range(bucket, 1), b = range(bucket, 2);
+        const maxR = Math.max(r, g, b);
+        if (maxR > maxRange) { maxRange = maxR; splitIdx = i; }
+      });
+
+      const bucket = buckets[splitIdx];
+      const r = range(bucket, 0), g = range(bucket, 1), b = range(bucket, 2);
+      const ch = r >= g && r >= b ? 0 : g >= b ? 1 : 2;
+
+      bucket.sort((a, b) => a[ch] - b[ch]);
+      const mid = Math.floor(bucket.length / 2);
+      buckets.splice(splitIdx, 1, bucket.slice(0, mid), bucket.slice(mid));
+    }
+
+    return buckets.map(bucket => {
+      const avg = [0, 0, 0];
+      bucket.forEach(p => { avg[0] += p[0]; avg[1] += p[1]; avg[2] += p[2]; });
+      return avg.map(v => Math.round(v / bucket.length));
+    });
+  }
+
+  function range(pixels, ch) {
+    const vals = pixels.map(p => p[ch]);
+    return Math.max(...vals) - Math.min(...vals);
+  }
+
+  function rgbToHex(r, g, b) {
+    return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+
+  // ─── RENDER ────────────────────────────────────
+  function renderPalette() {
+    const area = document.getElementById('paletteArea');
+    area.innerHTML = '';
+
+    currentPalette.forEach(({ rgb, hex }, i) => {
+      const row = document.createElement('div');
+      row.className = 'swatch-row';
+      row.style.animationDelay = `${i * 50}ms`;
+
+      const swatch = document.createElement('div');
+      swatch.className = 'swatch-color';
+      swatch.style.background = hex;
+      swatch.title = 'Clique para copiar';
+      swatch.onclick = () => copy(hex);
+
+      const info = document.createElement('div');
+      info.className = 'swatch-info';
+
+      const hexEl = document.createElement('div');
+      hexEl.className = 'swatch-hex';
+      hexEl.textContent = hex;
+      hexEl.onclick = () => copy(hex);
+
+      const rgbEl = document.createElement('div');
+      rgbEl.className = 'swatch-rgb';
+      rgbEl.textContent = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+
+      info.appendChild(hexEl);
+      info.appendChild(rgbEl);
+
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'COPIAR';
+      btn.onclick = () => {
+        copy(hex);
+        btn.textContent = 'COPIADO';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'COPIAR'; btn.classList.remove('copied'); }, 1500);
+      };
+
+      row.appendChild(swatch);
+      row.appendChild(info);
+      row.appendChild(btn);
+      area.appendChild(row);
+    });
+
+    // preview bar
+    const bar = document.getElementById('previewBar');
+    bar.innerHTML = '';
+    currentPalette.forEach(({ hex }) => {
+      const seg = document.createElement('div');
+      seg.className = 'preview-bar-seg';
+      seg.style.background = hex;
+      seg.setAttribute('data-hex', hex);
+      seg.onclick = () => copy(hex);
+      bar.appendChild(seg);
+    });
+
+    document.getElementById('barWrap').style.display = 'block';
+  }
+
+  // ─── CLIPBOARD ────────────────────────────────
+  function copy(text) {
+    navigator.clipboard.writeText(text).then(() => showToast(`${text} copiado!`));
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ─── EXPORT ───────────────────────────────────
+  function exportCSS() {
+    const vars = currentPalette.map(({ hex }, i) => `  --color-${i+1}: ${hex};`).join('\n');
+    const css = `:root {\n${vars}\n}`;
+    downloadText(css, 'palette.css');
+  }
+
+  function exportJSON() {
+    const obj = { palette: currentPalette.map(({ hex, rgb }, i) => ({ name: `color-${i+1}`, hex, rgb: { r: rgb[0], g: rgb[1], b: rgb[2] } }) ) };
+    downloadText(JSON.stringify(obj, null, 2), 'palette.json');
+  }
+
+  function exportHEX() {
+    copy(currentPalette.map(c => c.hex).join(', '));
+  }
+
+  function downloadText(content, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
+    a.download = filename;
+    a.click();
+    showToast(`${filename} baixado!`);
+  }
+</script>
+</body>
+</html>
